@@ -29,10 +29,9 @@ print("Number of missing values in: ")
 print(ecommerce_retail.isna().sum())
 
 #change data type
-ecommerce_retail['InvoiceNo'] = ecommerce_retail['InvoiceNo'].astype('string')
-ecommerce_retail['StockCode'] = ecommerce_retail['StockCode'].astype('string')
-ecommerce_retail['Description'] = ecommerce_retail['Description'].astype('string')
-ecommerce_retail['Country'] = ecommerce_retail['Country'].astype('string')
+column_list = ['InvoiceNo','StockCode','Description','Country']
+for c in column_list:
+     ecommerce_retail[c] = ecommerce_retail[c].astype('string')
 ecommerce_retail['CustomerID'] = ecommerce_retail['CustomerID'].astype(int) 
 
 #Recheck data type
@@ -70,39 +69,6 @@ ecommerce_retail= ecommerce_retail.drop(
 print((ecommerce_retail['UnitPrice'] < 0).sum())
 
 print((ecommerce_retail['Quantity'] < 0).sum())
-
-#Check outliers in UnitPrice col
-sns.boxplot(ecommerce_retail, x = 'UnitPrice') 
-
-#Check outliers in Quantity col
-sns.boxplot(ecommerce_retail, x = 'Quantity')  
-
-#Calculate iqr, upper, lower point for UnitPrice
-seventy_fifth_U = ecommerce_retail['UnitPrice'].quantile(0.75)
-twenty_fifth_U = ecommerce_retail['UnitPrice'].quantile(0.25)
-UnitPrice_iqr = seventy_fifth_U - twenty_fifth_U
-UnitPrice_upper = seventy_fifth_U + (1.5 * UnitPrice_iqr)
-UnitPrice_lower = twenty_fifth_U - (1.5 * UnitPrice_iqr)
-
-#Calculate iqr, upper, lower point for Quantity
-seventy_fifth_Q = ecommerce_retail['Quantity'].quantile(0.75)
-twenty_fifth_Q = ecommerce_retail['Quantity'].quantile(0.25)
-Quantity_iqr = seventy_fifth_Q - twenty_fifth_Q
-Quantity_upper = seventy_fifth_Q + (1.5 * Quantity_iqr)
-Quantity_lower = twenty_fifth_Q - (1.5 * Quantity_iqr)
-
-#remove outliers
-ecommerce_retail = ecommerce_retail[
-    (ecommerce_retail['UnitPrice'] > UnitPrice_lower) 
-        & (ecommerce_retail['UnitPrice'] < UnitPrice_upper)
-    & (ecommerce_retail['Quantity'] > Quantity_lower) 
-        & (ecommerce_retail['Quantity'] < Quantity_upper)]
-
-#Recheck outliers in UnitPrice
-sns.boxplot(ecommerce_retail, x = 'UnitPrice')  
-
-#Recheck outliers in Quantity
-sns.boxplot(ecommerce_retail, x = 'Quantity') 
 
 #Recheck incorrect values, abnormal data, outliers
 pd.set_option('display.max_columns', None)  
@@ -252,6 +218,9 @@ print(Cus_Seg)
 
 #Customer Segmentations
 Customer_Segment = Cus_Seg['Segment'].value_counts().reset_index(name= 'Number_of_Cus')
+total_customers = Customer_Segment['Number_of_Cus'].sum()
+Customer_Segment['Percentage'] = (Customer_Segment['Number_of_Cus'] / total_customers) * 100.0
+Customer_Segment['Percentage'] = Customer_Segment['Percentage'].round(2)
 
 print(Customer_Segment)
 
@@ -260,12 +229,14 @@ import plotly.express as px
 
 fig = px.treemap(
     Customer_Segment, 
-    path = ['Segment'], values = 'Number_of_Cus',
-    title = 'Distribution of Customer by Segmentation'
+    path = ['Segment'], values = 'Percentage',
+    title = '% Distribution of Customer by Segmentation'
 )
 
 fig.update_traces(textinfo='label+value')
 fig.update_layout(margin = dict(t = 50,l = 25, r = 30, b = 20))
+fig.update_traces(texttemplate='%{label}<br>%{value}%')
+
 fig.show()
 
 category = RFM_Seg[["Segment","Recency","Frequency", "Monetary"]].groupby('Segment').agg(["mean", "min", "max"])
